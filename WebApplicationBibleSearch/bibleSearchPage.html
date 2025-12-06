@@ -1,0 +1,212 @@
+﻿<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חיפוש בתנ"ך</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            direction: rtl;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 1200px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: right;
+        }
+
+        .left-side {
+            width: 60%;
+            padding-right: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            font-size: 32px;
+            color: #007BFF;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .bible-content {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            word-wrap: break-word;
+        }
+
+        input[type="text"], select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+        }
+
+            button:hover {
+                background-color: #0056b3;
+            }
+
+        .results {
+            height: 450px;
+            width:300px;
+            overflow-y: auto;
+            list-style: none;
+            padding: 0;
+            margin-top: 65px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+            .results h2 {
+                font-size: 24px;
+                color: white;
+                background-color: #007BFF;
+                padding: 10px;
+                text-align: center;
+                margin: 0;
+                border-radius: 8px 8px 0 0;
+            }
+
+            .results li {
+                background-color: #f0f0f0;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 5px;
+                font-size: 14px;
+            }
+
+        .select-chapter {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .left-side {
+                width: 100%;
+                padding-right: 0;
+                margin-bottom: 20px;
+            }
+
+            .results {
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-side">
+            <div class="title">חיפוש בתנ"ך</div>
+            <pre class="bible-content" id="showAllBible"></pre>
+            <input id="textSearchInp" type="text" placeholder="הכנס טקסט לחיפוש" />
+            <select id="selectBooks" onchange="changeSelectedBook()"></select>
+            <select id="selectChapter" onchange="changeSelectedChapter()" class="select-chapter"></select>
+        </div>
+        <div id="rightside">
+            <div class="results">
+                <h2>תוצאות</h2>
+                <ul id="results"></ul>
+            </div>
+            <button onclick="search('searchExpression')">חפש מילה</button>
+            <button onclick="search('searchAcronyms')">חפש ראשי תיבות</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        axios.get("https://localhost:7193/api/BibleSearch/string")
+            .then(function (response) {
+                document.getElementById("showAllBible").innerText = response.data;
+            })
+
+        axios.get("https://localhost:7193/api/BibleSearch/books")
+            .then(function (response) {
+                b = Array.from(response.data)
+                b.forEach(item => {
+                    const option = document.createElement("option")
+                    option.textContent = item
+                    document.getElementById('selectBooks').appendChild(option)
+                })
+            })
+
+        let r;
+        function search(type) {
+            document.getElementById('results').innerHTML = "";
+            axios.get(`https://localhost:7193/api/BibleSearch/${type}/${document.getElementById("textSearchInp").value}`)
+                .then(function (response) {
+                    r = Array.from(response.data)
+                    r.forEach(item => {
+                        const li = document.createElement("li")
+                        li.textContent = "[" + item.book + " " + item.chapter + ", " + item.verse + "]"
+                        document.getElementById('results').appendChild(li)
+                    })
+                })
+        }
+
+        function changeSelectedBook() {
+            axios.put(`https://localhost:7193/api/BibleSearch/changeSelectedBook/${document.getElementById("selectBooks").value}`)
+                .then(function (response) {
+                    if (document.getElementById("selectBooks").value != "כל הספרים") {
+                        document.getElementById('selectChapter').innerHTML = ""
+                        axios.get(`https://localhost:7193/api/BibleSearch/chapters`)
+                            .then(function (response) {
+                                c = Array.from(response.data)
+                                c.forEach(item => {
+                                    const option = document.createElement("option")
+                                    option.textContent = item
+                                    document.getElementById('selectChapter').appendChild(option)
+                                })
+                            })
+                        document.getElementById("selectChapter").style.display = "inline"
+                    }
+                    else
+                        document.getElementById("selectChapter").style.display = "none"
+                })
+        }
+
+        function changeSelectedChapter() {
+            axios.put(`https://localhost:7193/api/BibleSearch/changeSelectedChapter/${document.getElementById("selectChapter").value}`)
+                .then(function (response) {
+                    console.log("success change chapter : " + document.getElementById("selectChapter").value)
+                })
+        }
+    </script>
+</body>
+</html>

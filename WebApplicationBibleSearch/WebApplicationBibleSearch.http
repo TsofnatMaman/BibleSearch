@@ -1,0 +1,6 @@
+@WebApplicationBibleSearch_HostAddress = http://localhost:5098
+
+GET {{WebApplicationBibleSearch_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
